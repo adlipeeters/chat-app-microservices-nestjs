@@ -1,0 +1,29 @@
+version: '3'
+services:
+  rabbitmq:
+    image: 'rabbitmq:3-management'
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+  
+  producer-service:
+    build: ./producer-service
+    ports:
+      - '3001:3001'
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+    volumes:
+      - ./producer-service:/usr/src/app
+      - /usr/src/app/node_modules
+
+  consumer-service:
+    build: ./consumer-service
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+    volumes:
+      - ./consumer-service:/usr/src/app
+      - /usr/src/app/node_modules
