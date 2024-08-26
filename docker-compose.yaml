@@ -5,25 +5,108 @@ services:
     ports:
       - '5672:5672'
       - '15672:15672'
-  
-  producer-service:
-    build: ./producer-service
-    ports:
-      - '3001:3001'
-    depends_on:
-      - rabbitmq
-    environment:
-      - RABBITMQ_HOST=rabbitmq
-    volumes:
-      - ./producer-service:/usr/src/app
-      - /usr/src/app/node_modules
 
-  consumer-service:
-    build: ./consumer-service
+  redis:
+    image: 'redis:alpine'
+    # command: ["redis-server", "--protected-mode", "no"]
+    ports:
+      - '6379:6379'
+
+  auth-gateway:
+    build: ./auth-gateway
+    ports:
+      - '7001:3001'
     depends_on:
       - rabbitmq
+      - mysql
+      - redis
     environment:
       - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=user01
+      - RABBITMQ_PASSWORD=pass123^&*VBNM
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DB=nest_db
+      - MYSQL_USER=db_user
+      - MYSQL_PASSWORD=adli$$$$1234!!
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
-      - ./consumer-service:/usr/src/app
-      - /usr/src/app/node_modules
+      - ./auth-gateway:/usr/src/app
+      - ./auth-gateway/node_modules:/usr/src/app/node_modules
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+
+  user-service:
+    build: ./user-service
+    ports:
+      - '7002:3002'
+    depends_on:
+      - rabbitmq
+      - mysql
+      - redis
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=user01
+      - RABBITMQ_PASSWORD=pass123^&*VBNM
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DB=nest_db
+      - MYSQL_USER=db_user
+      - MYSQL_PASSWORD=adli$$$$1234!!
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./user-service:/usr/src/app
+      - ./user-service/node_modules:/usr/src/app/node_modules
+
+  chat-service:
+    build: ./chat-service
+    ports:
+      - '7003:3003'
+      - '8001:8001'  # Expose WebSocket port
+    depends_on:
+      - rabbitmq
+      - mysql
+      - redis
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=user01
+      - RABBITMQ_PASSWORD=pass123^&*VBNM
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DB=nest_db
+      - MYSQL_USER=db_user
+      - MYSQL_PASSWORD=adli$$$$1234!!
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./chat-service:/usr/src/app
+      - ./chat-service/node_modules:/usr/src/app/node_modules
+
+  mysql:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: nest_db
+      MYSQL_USER: db_user
+      MYSQL_PASSWORD: adli$$$$1234!!
+    container_name: mysql
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - '3306:3306'
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    ports:
+      - '8080:80'
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: db_user
+      PMA_PASSWORD: adli$$$$1234!!
+      UPLOAD_LIMIT: 50M
+
+volumes:
+  mysql-data:
